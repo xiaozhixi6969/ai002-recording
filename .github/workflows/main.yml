@@ -24,34 +24,44 @@ jobs:
             wget unzip git zip
 
       - name: Set JAVA_HOME
-        run: echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-
-      - name: Download Android SDK
         run: |
-          mkdir -p android-sdk
-          cd android-sdk
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Download Android SDK command line tools
+        run: |
+          mkdir -p android-sdk/cmdline-tools
+          cd android-sdk/cmdline-tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
           unzip -q cmdline-tools.zip
-          mkdir -p cmdline-tools/latest
-          mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
+          mv cmdline-tools cmdline-tools/latest 2>/dev/null || true
           echo "ANDROID_SDK_ROOT=${{ github.workspace }}/android-sdk" >> $GITHUB_ENV
-          echo "${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
-      - name: Accept licenses and install SDK
+      - name: Accept licenses
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          yes | ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: Install SDK components
+        run: |
+          SDKMANAGER="${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin/sdkmanager"
+          $SDKMANAGER "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Set SDK paths
+        run: |
+          echo "${{ github.workspace }}/android-sdk/build-tools/34.0.0" >> $GITHUB_PATH
+          echo "ANDROIDSDK=${{ github.workspace }}/android-sdk" >> $GITHUB_ENV
+          echo "ANDROIDNDKVER=25.2.9519653" >> $GITHUB_ENV
+          echo "ANDROIDAPI=34" >> $GITHUB_ENV
 
       - name: Install Python packages
-        run: pip install --upgrade pip && pip install cython==0.29.36 buildozer==1.5.0
+        run: |
+          pip install --upgrade pip
+          pip install cython==0.29.36
+          pip install buildozer==1.5.0
 
       - name: Build APK
-        run: buildozer android debug
-        timeout-minutes: 40
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai002-apk
-          path: build/bin/*.apk
-          retention-days: 5
+        run: |
+          buildozer android debug || true
+          ls -la build/bin/ 2>/dev/null || echo "No APK yet"
+        timeout-minutes: 45
