@@ -28,11 +28,12 @@ jobs:
 
       - name: Download Android SDK
         run: |
-          mkdir -p android-sdk/cmdline-tools
-          cd android-sdk/cmdline-tools
+          mkdir -p android-sdk
+          cd android-sdk
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
           unzip -q cmdline-tools.zip
-          mv cmdline-tools cmdline-tools/latest
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
           echo "ANDROID_SDK_ROOT=${{ github.workspace }}/android-sdk" >> $GITHUB_ENV
           echo "${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
